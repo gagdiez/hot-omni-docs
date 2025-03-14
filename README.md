@@ -15,7 +15,8 @@ To deposit tokens on the Omni Chain, you need to send them to the smart contract
 For all chains other than NEAR, you will need to provide an attestation of the transfer to the Omni Chain smart contract on NEAR.
 
 
-### Step 1: Fungible Token Transfer
+### Step One: Fungible Token Transfer
+
 {% tabs %}
 
 {% tab title="Omni SDK" %} 
@@ -66,7 +67,7 @@ You need to ...
 {% endtabs %}
 
 
-## Step 2: Attestation
+### Step Two: Attestation
 
 Once you have transferred your tokens to the Omni Chain, you will need to provide an attestation of the transfer to the Omni Chain smart contract on NEAR.
 
