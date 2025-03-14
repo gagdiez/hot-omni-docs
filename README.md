@@ -12,23 +12,31 @@ This way, whenever a user deposits tokens on Solana, they are provided with its 
 
 To deposit tokens on the Omni Chain, you need to send them to the smart contract deployed on the chain you are using.
 
-| Chain    | Address |
-|----------|---------|
-| TON      | `0:`    |
-| Solana   | `0:`    |
-| NEAR     | `0:`    |
-| Ethereum | `0:`    |
+For all chains other than NEAR, you will need to provide an attestation of the transfer to the Omni Chain smart contract on NEAR.
+
+
+### Step 1: Fungible Token Transfer
+{% tabs %}
+
+{% tab title="Omni SDK" %} 
+
+{% endtab %}
+
+{% tab title="NEAR" %} 
+
+In NEAR, you only need to transfer your Fungible Tokens to the smart Omni Chain contract deployed at `...`
+
+
+> [!Warning]
+> Do not make a direct NEAR transfer, instead you will need to transfer the `Wrapped NEAR` (`wrap.near`) token to the Omni Chain contract.
 
 <details>
-<summary>Deposit using the Omni SDK</summary>
-
-```js
-
-```
+<summary>Deposit from a NEAR Smart Contract </summary>
 
 </details>
 
 <details>
+
 <summary>Deposit from a NEAR Smart Contract </summary>
 
 ```rust
@@ -36,6 +44,37 @@ To deposit tokens on the Omni Chain, you need to send them to the smart contract
 ```
 
 </details>
+
+{% endtab %}
+
+{% tab title="Solana" %}
+
+
+
+{% endtab %}
+
+{% tab title="TON" %}
+
+You need to ...
+
+```js
+
+````
+
+{% endtab %}
+
+{% endtabs %}
+
+
+## Step 2: Attestation
+
+Once you have transferred your tokens to the Omni Chain, you will need to provide an attestation of the transfer to the Omni Chain smart contract on NEAR.
+
+> [!NOTE]
+> If you transferred your tokens from the NEAR chain, you can skip this step.
+
+
+
 
 
 ---
