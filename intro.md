@@ -92,6 +92,8 @@ const args = {
 await account.functionCall(args);
 ```
 
+See the full code [here](#link)
+
 </details>
 
 <details>
@@ -136,6 +138,8 @@ impl Contract {
   }
 }
 ```
+
+See the full code [here](#link)
 
 </details>
 
@@ -196,6 +200,8 @@ After you sent tokens on HOT's solana wallet, you need to:
 3. If it's not, you need to get a deposit signature from HOT Omni API
 4. Use this signature to finish your deposit by calling `deposit` method on NEAR smart contract.
 5. After finishing your deposit or if the deposit was already used, you need to call `clearDepositInfo` on Solana's metawallet.
+
+See example code [here](#link)
 
 {% endtab %}
 
