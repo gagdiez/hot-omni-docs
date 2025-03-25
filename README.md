@@ -59,8 +59,9 @@ solanaUsdtDeposit();
 
 In NEAR, you only need to transfer your Fungible Tokens to the smart contract deployed at `v1-1.omni.hot.tg`.
 
-> [!Warning]
-> Do not make a direct NEAR transfer, instead you will need to transfer the `Wrapped NEAR` (`wrap.near`) token to the Omni Chain contract.
+{% hint style="warning" %}
+Do not make a direct NEAR transfer, instead you will need to transfer the `Wrapped NEAR` (`wrap.near`) token to the Omni Chain contract.
+{% endhint %}
 
 <details>
 
@@ -185,9 +186,9 @@ But the key point here is sending a deposit transaction calling `deposit` method
 
 Once you have transferred your tokens to one of the protocol wallets, you will need to provide an attestation of the transfer to the HOT Omni Protocol smart contract on NEAR.
 
-> [!NOTE]
-> If you transferred your tokens from the NEAR chain, you can skip this step.
-
+{% hint style="info" %}
+If you transferred your tokens from the NEAR chain, you can skip this step.
+{% endhint %}
 
 {% tabs %}
 
@@ -371,16 +372,18 @@ impl Contract {
 
 </details>
 
-> [!NOTE]
-> If you want to withdraw your tokens directly on NEAR, you can simply call `withdraw_on_near` on the Omni smart contract, and you can then skip the next steps.
+{% hint style="info" %}
+If you want to withdraw your tokens directly on NEAR, you can simply call `withdraw_on_near` on the Omni smart contract, and you can then skip the next steps.
+{% endhint %}
 
 
 #### Step Two: Withdraw on the Chain
 
 Once you have the Omni token on the chain you want to withdraw from, you can interact with the smart contract to withdraw the tokens.
 
-> [!NOTE]
-> If you want to withdraw your tokens directly on NEAR, you can simply call `withdraw_on_near` on the Omni smart contract, and you can then skip the next steps.
+{% hint style="info" %}
+If you want to withdraw your tokens directly on NEAR, you can simply call `withdraw_on_near` on the Omni smart contract, and you can then skip the next steps.
+{% endhint %}
 
 
 {% tabs %}
@@ -400,15 +403,17 @@ Once you have the Omni token on the chain you want to withdraw from, you can int
   2. Get a signature from HOT Omni API to refund your Omni balance.
   3. Call `refund` method on NEAR smart contract to finish refund in restore your asset's balance.
 
-  > [!Warning]
-  > Any actions on your withdrawal request are available only for the last nonce. It means once you created a withdrawal request you have to finish or refund it before you can create a new one. This is due to the specifics of how smart contracts work in Solana.
+  {% hint style="warning" %}
+  Any actions on your withdrawal request are available only for the last nonce. It means once you created a withdrawal request you have to finish or refund it before you can create a new one. This is due to the specifics of how smart contracts work in Solana.
+  {% endhint %}
 
 {% endtab %}
 
 {% tab title="TON" %}
 
-> [!Warning]
-> Any actions on your withdrawal request are available only for the last nonce. It means once you created a withdrawal request you have to finish or refund it before you can create a new one. This is due to the specifics of how smart contracts work in Ton.
+  {% hint style="warning" %}
+  Any actions on your withdrawal request are available only for the last nonce. It means once you created a withdrawal request you have to finish or refund it before you can create a new one. This is due to the specifics of how smart contracts work in TON.
+  {% endhint %}
 
 To withdraw tokens on Ton you need:
 
