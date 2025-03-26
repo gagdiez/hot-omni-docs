@@ -246,6 +246,81 @@ To transfer assets between users within HOT network you just need to call the `o
 - account_id
 - receiver_id
 
+<summary>Transfer from a backend</summary>
+
+```js
+import { baseEncode } from "@near-js/utils";
+import { Buffer } from 'buffer';
+import { getBytes, sha256 } from "ethers";
+
+const TGAS = 1000000000000n;
+
+const tokenAmount = 1;
+const tokenDecimals = 6;
+
+const provider = new providers.JsonRpcProvider({ url });
+
+const receiverId = "bob.near";
+
+const args = {
+  contractId: "v1-1.omni.hot.tg",
+  methodName: "omni_transfer",
+  args: {
+    account_id: baseEncode(getBytes(sha256(Buffer.from(accountId, "utf8")))),
+    receiver_id: baseEncode(getBytes(sha256(Buffer.from(receiverId, "utf8")))),
+    token_id: 9,
+    amount: String(BigInt(tokenAmount * 10**tokenDecimals)),
+  },
+  deposit: needReg == null ? 5000000000000000000000n : 1n,
+  gas: 80n * TGAS,
+};
+
+// "account" here is an instance of Account interface from near-api-js
+await account.functionCall(args);
+```
+
+</details>
+
+<summary>Transfer from a NEAR Smart Contract</summary>
+
+```rust
+pub fn transfer(&self, amount: U128, token_id: u8) -> Promise {
+    let account_id = env::current_account_id();
+    let receiver_id = env::predecessor_account_id();
+
+    hot_omni_contract::ext("v1-1.omni.hot.tg".parse().unwrap())
+        .with_static_gas(Gas::from_tgas(80))
+        .with_attached_deposit(NearToken::from_yoctonear(1))
+        .omni_transfer(
+            get_omni_address(account_id.to_string()),
+            get_omni_address(receiver_id.to_string()),
+            token_id,
+            amount.0.to_string(),
+        )
+        .then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(Gas::from_tgas(5))
+                .transfer_callback(),
+        )
+}
+
+#[private]
+pub fn transfer_callback(
+    &self,
+    #[callback_result] call_result: Result<(), PromiseError>,
+) -> bool {
+    if call_result.is_err() {
+        log!("There was an error transferring within HOT Omni Contract");
+        false
+    } else {
+        env::log_str("transferring was successful!");
+        true
+    }
+}
+```
+
+</details>
+
 ### Transfer to smart contract and call a method
 Similar to transferring fungible tokens to smart contract on NEAR you can transfer tokens using HOT network. Call `omni_transfer_call` method and pass the arguments:
 
@@ -255,7 +330,6 @@ Similar to transferring fungible tokens to smart contract on NEAR you can transf
 - account_id
 - receiver_id
 - callback_account_id
-
 
 ---
 
