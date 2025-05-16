@@ -6,10 +6,10 @@ See how HOT Bridge works [here](https://hot-labs.gitbook.io/hot-protocol/vqtWI3S
 
 Omni SDK key features include:
 
-- Deposit tokens (from NEAR and EVM using NEAR Intents)
-- Withdraw tokens (to NEAR and EVM using NEAR Intents)
+- Deposit tokens (from NEAR and EVM)
+- Withdraw tokens (to NEAR and EVM)
 - Handle pending withdrawals
-- View HOT Bridge token balances (using NEAR Intents)
+- View HOT Bridge token balances
 
 Coming soon:
 
@@ -111,30 +111,14 @@ export const useBridge = () => {
 
 ---
 
-## Hot Omni Tokens representations on Near Intents
-
-### NEAR
-
-When user deposits tokens from NEAR chains to Hot Bridge the user's balance is replenished with tokens of the format `nep141:wrap.near`.
-
-### Other chains
-
-For deposits from non-NEAR chains the user's balance on Near Intents is replenished with tokens which have format like `nep245:v2_1.omni.hot.tg:1111_3twhsFNJUtm8vS2g3NH1LVdQbwcYo4FaypDmUcwdSfuR1fd`. Here we have:
-- `nep245:v2_1.omni.hot.tg:` is the prefix pointing that token is related to Hot Bridge
-- `1111` - chain id within Hot Bridge
-- `3twhsFNJUtm8vS2g3NH1LVdQbwcYo4FaypDmUcwdSfuR1fd` is the base58 encoded token address.
-
----
-
 ## Deposit
 
-The Omni SDK allows users smoothly deposit tokens from different chains into the [NEAR Intents](https://app.near-intents.org/) smart contract (`intents.near`) on NEAR.
+Lets take a look at how to deposit tokens into the Omni SDK from different chains.
 
 ### NEAR
 
-Depositing tokens process from NEAR interacts directly with `intents.near` smart contract.
+To deposit tokens from the NEAR chain, you need to call the `bridge.near.depositToken` method,passing the following parameters:
 
-It requires calling `bridge.near.depositToken` method, and passing the following parameters:
 - `getAddress`: function that returns user's NEAR accountId
 - `getIntentAccount`: function that returns user's NEAR Intent accountId
 - `sendTransaction`: function that sends a transaction on NEAR (see [the near react hook](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/near.ts#L82))
@@ -163,13 +147,25 @@ const handleDeposit = async (e: any) => {
 
 >_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/DepositComponent.tsx#L46)._
 
+<details>
+
+<summary> Where are the tokens being deposited? </summary>
+
+When you deposit tokens from the NEAR chain, the tokens are actually being deposited into the NEAR Intents smart contract.
+
+It is important to note that all tokens will be deposited as native `NEP141`, including native NEAR which will be converted to its wrapped representation (`wrap.near`)
+
+</details>
+
 ### EVM chains
+ 
+When depositing tokens process from EVM chains we need to do two things, the first is depositing the tokens on what we call a `locker` contract on the native chain, and the second is to let know the Omni contract on NEAR that a deposit has been made.
 
-Depositing tokens process from EVM chains includes depositing assets into corresponding Locker contract, attestating that deposit transaction is executed successfully by signing it via Hot Bridge MPC service, and letting know Omni contract on NEAR that deposit was made.
+All the complexity is hidden behind the SDK, so we just need to call `bridge.evm.deposit` method, followed by `bridge.finishDeposit`.
 
-Depositing tokens from an EVM chain requires using the `bridge.evm.deposit`. Similar to the NEAR deposit, you need to pass the following parameters:
+Similar to the NEAR deposit, `bridge.evm.deposit` requires us to pass a couple of parameters:
 - `getAddress`: function that returns user's EVM address
-- `getIntentAccount`: function that returns user's NEAR Intent accountId
+- `getIntentAccount`: function that returns user's NEAR Intent accountId, this is, the account that **will receive the tokens on NEAR**
 - `sendTransaction`: function that sends a transaction on EVM (see the [evm react hook](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/evm.ts#L55))
 - `amount`: amount of tokens (without denomanation)
 - `chain`: chain id of the EVM chain
@@ -198,13 +194,23 @@ const handleDeposit = async (e: any) => {
 }
 ```
 
-This method will make a deposit on a contract **in the corresponding EVM chain**, handling token approvals if necessary.
+All complexity of the deposit is handled by the `bridge.evm.deposit`, including handling token approvals in the EVM chain if necessary.
 
-To let the NEAR Intents smart contract know that the deposit was made on a specific chain, we need to call the `bridge.finishDeposit` method.
-
-The `bridge.finishDeposit` method will gather all the deposit data from the EVM chain, and sign a message for the HOT Bridge MPC service to inform it, and them confirm that the deposit was credited by checking the new HOT OMNI Balance smart contract.
+The same way, `bridge.finishDeposit` gathers all the deposit data from the EVM chain, and presents a proof of deposit to the HOT Bridge, and then confirms that the deposit was credited by checking the new HOT OMNI Balance.
 
 >_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/DepositComponent.tsx#L46)._
+
+<details>
+
+<summary> How are tokens represented on NEAR?</summary>
+
+On NEAR, the `v2_1.omni.hot.tg` contract follows what is known as the [MultiToken standard](https://github.com/shipsgold/NEPs/blob/master/specs/Standards/MultiToken/Core.md).
+
+When we deposit tokens from an EVM chain, and present a proof of deposit, the Omni contract proceeds to mint a new token on the NEAR chain, which represent the deposited token. Particularly, tokens follow the form: `nep245:v2_1.omni.hot.tg:<chain_id>_<base58_encoded_address>` - e.g. `nep245:v2_1.omni.hot.tg:1_43mFVfjVcGGEbHurXm8UFVkHey6W` represents the USDT token on Ethereum.
+
+Immediately after the tokens are minted, they are deposited into NEAR Intents on behalf of the user, who retains full ownership and control of these assets.
+
+</details>
 
 ---
 
@@ -245,6 +251,13 @@ const handleWithdraw = async () => {
 
 >_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/WithdrawComponent.tsx#L47)._
 
+<details>
+<summary> Under the hood </summary>
+
+You will just make a call to `withdraw` the token directly to your account
+
+</details>
+
 ### EVM chains
 
 To withdraw on Evm chain you should also call `withdrawToken` method of Omni SDK and pass the same parameters as for NEAR chain. Under the hood the method:
@@ -267,6 +280,14 @@ const handleWithdraw = async () => {
 ```
 
 >_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/WithdrawComponent.tsx#L47)._
+
+<details>
+
+<summary> Under the hood </summary>
+
+Since tokens are actually deposited on NEAR Intents, the Omni SDK will call `withdaw_frunciton` to recover the MultiTokens... and then burn them? ... and then something? ... , which will end up in ... until you get the tokens.
+
+</details>
 
 ---
 
