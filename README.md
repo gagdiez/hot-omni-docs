@@ -6,11 +6,10 @@ See how HOT Bridge works [here](https://hot-labs.gitbook.io/hot-protocol/vqtWI3S
 
 Omni SDK key features include:
 
-- Connect NEAR, EVM (currently deposit only to Intent account binded to NEAR wallet)
-- Deposit token widget (from NEAR, EVM)
-- Withdraw token widget (to NEAR, EVM)
-- Find pending withdrawals and finish them
-- View HOT Bridge tokens balances on Intents.
+- Deposit tokens (from NEAR and EVM using NEAR Intents)
+- Withdraw tokens (to NEAR and EVM using NEAR Intents)
+- Handle pending withdrawals
+- View HOT Bridge token balances (using NEAR Intents)
 
 Coming soon:
 
@@ -30,12 +29,12 @@ npm install @hot-labs/omni-sdk
 
 ## Initialize
 
-To initialize the Omni SDK and interact with HotBridge from your frontend you should create a new instance of HotBridge class:
+To initialize the Omni SDK and interact with HotBridge from your frontend, create a new instance of the HotBridge class:
 
 ```js
+import { useEffect } from "react";
 import { mainnet, base, arbitrum, optimism, polygon, bsc, avalanche } from "viem/chains";
 import { HotBridge } from "@hot-labs/omni-sdk";
-import { useEffect } from "react";
 import { useNearWallet } from "./near";
 
 export const bridge = new HotBridge({
@@ -54,7 +53,7 @@ export const bridge = new HotBridge({
   },
 });
 
-// Reach hooks to use the bridge instance
+// React hook to use the bridge instance
 export const useBridge = () => {
   const nearWallet = useNearWallet();
 
@@ -68,13 +67,13 @@ export const useBridge = () => {
   return { bridge };
 };
 ```
-> _See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/bridge.ts)_
+> _See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/bridge.ts)._
 
 Let's break down the code so we can understand what is happening.
 
 ### Instantiating the Bridge
 
-We are instantiating a `HotBridge`, and defining a dictionary of `chain-id` to `rpc-url` mappings. This is later used by the bridger to ....
+We are instantiating a `HotBridge`, and defining a dictionary of `chain-id` to `rpc-url` mappings. This is later used by the bridge to interact with different chains.
 
 ```js
 export const bridge = new HotBridge({
@@ -90,7 +89,7 @@ export const bridge = new HotBridge({
 
 ### The Hook
 
-In order for other components to use the bridger, we are creating a react hook.
+In order for other components to use the bridge, we are creating a react hook.
 
 Notice that we are setting the `executeNearTransaction` function on the bridge instance. In our example, the function is in turn calling an instance of the `walletSelector` to sign and send the transaction on NEAR.
 
@@ -112,18 +111,35 @@ export const useBridge = () => {
 
 ---
 
-## Deposit
-
-The `Hot Omni Bridge` deposits tokens directly into the [NEAR Intents](https://app.near-intents.org/) smart contract (`<address.near>`). This allows users to ....
+## Hot Omni Tokens representations on Near Intents
 
 ### NEAR
 
-Depositing tokens from NEAR requires calling `bridge.near.depositToken` method, and passing the following parameters:
+When user deposits tokens from NEAR chains to Hot Bridge the user's balance is replenished with tokens of the format `nep141:wrap.near`.
+
+### Other chains
+
+For deposits from non-NEAR chains the user's balance on Near Intents is replenished with tokens which have format like `nep245:v2_1.omni.hot.tg:1111_3twhsFNJUtm8vS2g3NH1LVdQbwcYo4FaypDmUcwdSfuR1fd`. Here we have:
+- `nep245:v2_1.omni.hot.tg:` is the prefix pointing that token is related to Hot Bridge
+- `1111` - chain id within Hot Bridge
+- `3twhsFNJUtm8vS2g3NH1LVdQbwcYo4FaypDmUcwdSfuR1fd` is the base58 encoded token address.
+
+---
+
+## Deposit
+
+The Omni SDK allows users smoothly deposit tokens from different chains into the [NEAR Intents](https://app.near-intents.org/) smart contract (`intents.near`) on NEAR.
+
+### NEAR
+
+Depositing tokens process from NEAR interacts directly with `intents.near` smart contract.
+
+It requires calling `bridge.near.depositToken` method, and passing the following parameters:
 - `getAddress`: function that returns user's NEAR accountId
 - `getIntentAccount`: function that returns user's NEAR Intent accountId
-- `sendTransaction`: function that sends a transaction on NEAR (see near react hook)
+- `sendTransaction`: function that sends a transaction on NEAR (see [the near react hook](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/near.ts#L82))
 - `amount`: amount of tokens (without denomanation), e.g. 1000 for 0.001 USDT (usdt.tether-token.near)
-- `token`: token contract, eg. usdt.tether-token.near 
+- `token`: token contract, eg. `usdt.tether-token.near`.
 
 ```js
 const nearSigner = useNearWallet();
@@ -134,28 +150,30 @@ const handleDeposit = async (e: any) => {
   // ...
 
   await bridge.near.depositToken({
-    getAddress: async () => nearSigner.accountId!, // User's accountId
-    getIntentAccount: async () => nearSigner.intentAccount!, // User's accountId on NEAR Intents (on NEAR it's the same as accountId)
-    sendTransaction: nearSigner.sendTransaction, // method sendTransaction from to actually make a transaction on NEAR (see near react hook)
-    amount: BigInt(amount), // Amount of tokens (without denomanation), e.g. 1000 for 0.001 USDT (usdt.tether-token.near)
-    token: token, // Token contract, eg. usdt.tether-token.near
+    getAddress: async () => nearSigner.accountId!,
+    getIntentAccount: async () => nearSigner.intentAccount!,
+    sendTransaction: nearSigner.sendTransaction,
+    amount: BigInt(amount),
+    token: token,
   });
 
   // ...
 }
 ```
 
-See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/DepositComponent.tsx#L46).
+>_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/DepositComponent.tsx#L46)._
 
 ### EVM chains
+
+Depositing tokens process from EVM chains includes depositing assets into corresponding Locker contract, attestating that deposit transaction is executed successfully by signing it via Hot Bridge MPC service, and letting know Omni contract on NEAR that deposit was made.
 
 Depositing tokens from an EVM chain requires using the `bridge.evm.deposit`. Similar to the NEAR deposit, you need to pass the following parameters:
 - `getAddress`: function that returns user's EVM address
 - `getIntentAccount`: function that returns user's NEAR Intent accountId
-- `sendTransaction`: function that sends a transaction on EVM (see evm react hook)
+- `sendTransaction`: function that sends a transaction on EVM (see the [evm react hook](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/evm.ts#L55))
 - `amount`: amount of tokens (without denomanation)
 - `chain`: chain id of the EVM chain
-- `token`: token contract (e.g. ...)
+- `token`: token contract (e.g. `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48`)
 
 ```js
 const evmSigner = useEvmWallet();
@@ -166,9 +184,9 @@ const handleDeposit = async (e: any) => {
   // ...
 
   const deposit = await bridge.evm.deposit({
-    getAddress: async () => evmSigner.address!, // User's EVM address
-    getIntentAccount: async () => nearSigner.intentAccount!, // User's NEAR Intent account
-    sendTransaction: evmSigner.sendTransaction, // method sendTransaction to actually make a transaction on EVM (see evm react hook)
+    getAddress: async () => evmSigner.address!,
+    getIntentAccount: async () => nearSigner.intentAccount!,
+    sendTransaction: evmSigner.sendTransaction,
     amount: BigInt(amount),
     chain: network,
     token: token,
@@ -186,7 +204,7 @@ To let the NEAR Intents smart contract know that the deposit was made on a speci
 
 The `bridge.finishDeposit` method will gather all the deposit data from the EVM chain, and sign a message for the HOT Bridge MPC service to inform it, and them confirm that the deposit was credited by checking the new HOT OMNI Balance smart contract.
 
-See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/DepositComponent.tsx#L46).
+>_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/DepositComponent.tsx#L46)._
 
 ---
 
@@ -194,7 +212,14 @@ See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/s
 
 ### NEAR
 
-To withdraw tokens on NEAR network you need just to call `withdrawToken` method of Omni SDK. For NEAR chain that method just asks user to sign withdrawing intent message and calls withdrawing transaction directly on NEAR Intents.
+To withdraw tokens on NEAR network you need just to call `withdrawToken` method of Omni SDK. For NEAR chain that method just asks user to sign withdrawing intent message and calls withdrawing transaction directly on NEAR Intents. It requires passing the following parameters:
+
+- `getIntentAccount`: function that returns user's NEAR Intent accountId
+- `signIntent`: function that leverages Wallet Selector's signMessage method to sign intent's payload (see [the near react hook](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/near.ts#L60))
+- `receiver`: a wallet address to withdraw assets to
+- `amount`: amount of tokens (without denomanation), e.g. 1000 for 0.001 USDT (usdt.tether-token.near)
+- `chain`: chain id
+- `token`: token contract, eg. `usdt.tether-token.near`.
 
 ```js
 // ...
@@ -218,14 +243,14 @@ const handleWithdraw = async () => {
 }
 ```
 
-See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/WithdrawComponent.tsx#L47).
+>_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/WithdrawComponent.tsx#L47)._
 
 ### EVM chains
 
-To withdraw on Evm chain you should also call `withdrawToken` method of Omni SDK. Under the hood the method:
+To withdraw on Evm chain you should also call `withdrawToken` method of Omni SDK and pass the same parameters as for NEAR chain. Under the hood the method:
 
 1. Check if there is unfinished withdrawing process. User can have only one unfinished withdrawal process
-2. Ask user to sign withdrawing intent message and calls withdrawing transaction for HOT Omni Token on NEAR Intents to Hot Balance smart contract
+2. Ask user to sign withdrawing intent message and calls withdrawing transaction for HOT Omni Token representaion on NEAR Intents to Hot Balance smart contract
 3. Checks if withdrawal was created and has not been claimed yet
 4. Signs withdrawal data using HOT Bridge MPC service.
 
@@ -241,7 +266,7 @@ const handleWithdraw = async () => {
 }
 ```
 
-See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/WithdrawComponent.tsx#L47).
+>_See the full code [here](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/components/WithdrawComponent.tsx#L47)._
 
 ---
 
