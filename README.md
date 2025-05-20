@@ -113,11 +113,11 @@ export const useBridge = () => {
 
 ## Deposit
 
-Lets take a look at how to deposit tokens into the Omni SDK from different chains.
+Lets take a look at how to deposit tokens into the Hot Bridge from different chains using the Omni SDK.
 
 ### NEAR
 
-To deposit tokens from the NEAR chain, you need to call the `bridge.near.depositToken` method,passing the following parameters:
+To deposit tokens from the NEAR chain, you need to call the `bridge.near.depositToken` method, passing the following parameters:
 
 - `getAddress`: function that returns user's NEAR accountId
 - `getIntentAccount`: function that returns user's NEAR Intent accountId
@@ -218,7 +218,7 @@ Immediately after the tokens are minted, they are deposited into NEAR Intents on
 
 ### NEAR
 
-To withdraw tokens on NEAR network you need just to call `withdrawToken` method of Omni SDK. For NEAR chain that method just asks user to sign withdrawing intent message and calls withdrawing transaction directly on NEAR Intents. It requires passing the following parameters:
+To withdraw tokens into the NEAR chain, you need to call the `bridge.withdrawToken` method, passing the following parameters:
 
 - `getIntentAccount`: function that returns user's NEAR Intent accountId
 - `signIntent`: function that leverages Wallet Selector's signMessage method to sign intent's payload (see [the near react hook](https://github.com/hot-dao/omni-sdk/blob/main/demo-ui/src/hooks/near.ts#L60))
@@ -254,20 +254,24 @@ const handleWithdraw = async () => {
 <details>
 <summary> Under the hood </summary>
 
-You will just make a call to `withdraw` the token directly to your account
+For NEAR chain that method just asks user to sign withdrawing intent message and calls withdrawing transaction directly on NEAR Intents.
 
 </details>
 
 ### EVM chains
 
-To withdraw on Evm chain you should also call `withdrawToken` method of Omni SDK and pass the same parameters as for NEAR chain. Under the hood the method:
+The withdrawing tokens process from EVM chains is a two-step process that basically reverses the depositing steps.
 
-1. Check if there is unfinished withdrawing process. User can have only one unfinished withdrawal process
-2. Ask user to sign withdrawing intent message and calls withdrawing transaction for HOT Omni Token representaion on NEAR Intents to Hot Balance smart contract
-3. Checks if withdrawal was created and has not been claimed yet
+, the first is depositing the tokens on what we call a `locker` contract on the native chain, and the second is to let know the Omni contract on NEAR that a deposit has been made.
+
+The first step is calling `bridge.withdrawToken` method of the Omni SDK and pass the same parameters as for NEAR chain. Under the hood that method:
+
+1. Checks if there is unfinished withdrawing process. User can have only one unfinished withdrawal process at a time.
+2. Asks user to sign withdrawing intent message and calls withdrawing transaction for HOT Omni Token representaion on NEAR Intents to Hot Balance smart contract
+3. Checks if withdrawal was created and has not been fully claimed yet
 4. Signs withdrawal data using HOT Bridge MPC service.
 
-But to finish withrawing you need to call additionally `bridge.evm.withdraw` method. That method withdraws funds from corresponding locker contract.
+The second step is actually transferring assets from corresponding locker contract to receiver address. To do that you need to call the `bridge.evm.withdraw` method.
 
 ```js
 const handleWithdraw = async () => {
@@ -285,8 +289,9 @@ const handleWithdraw = async () => {
 
 <summary> Under the hood </summary>
 
-Since tokens are actually deposited on NEAR Intents, the Omni SDK will call `withdaw_frunciton` to recover the MultiTokens... and then burn them? ... and then something? ... , which will end up in ... until you get the tokens.
+Since tokens are deposited on NEAR Intents as MultiTokens with format like `nep245:v2_1.omni.hot.tg:<chain_id>_<base58_encoded_address>`, the Omni SDK will firstly ask user to sign and execute `mt_withdraw` intent on Near Intents smart contract `intent.near` to withdraw those tokens to Hot Bridge smart contract.
 
+Once that withdrawal is done, the Omni SDK gathers withdrawal information and signs it using Hot MPC service. Using that data and signature user eventually calls transaction that transfers tokens from corresponding locker contract to user's address by calling `bridge.evm.withdraw` method.
 </details>
 
 ---
